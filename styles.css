@@ -1044,3 +1044,158 @@ canvas,
     transition: none !important;
   }
 }
+
+/* ====================================
+   NEW WHITE FOOTER - DESKTOP + MOBILE
+==================================== */
+
+.closing {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 90px 0 0;
+  background: #ffffff;
+  color: #241511;
+  text-align: center;
+  overflow: hidden;
+}
+
+.closing-copy {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.closing .eyebrow {
+  color: #98675e;
+  font-size: 11px;
+  letter-spacing: .18em;
+}
+
+.closing h2 {
+  color: #241511;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(48px, 7vw, 105px);
+  font-weight: 500;
+  letter-spacing: -.06em;
+  line-height: 1.05;
+  margin: 24px 0 20px;
+}
+
+.closing h2 em {
+  color: #b66d80;
+  font-weight: 500;
+}
+
+/* ICE CREAM IMAGE BELOW THE TEXT */
+.closing .footer-picture {
+  display: block;
+  position: relative;
+  width: 100%;
+  max-width: 1800px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.closing .footer-picture img {
+  display: block;
+  position: static;
+  width: 100%;
+  height: auto;
+  opacity: 1;
+  object-fit: contain;
+  filter: none;
+}
+
+/* BUTTON */
+.closing .return-link {
+  display: inline-block;
+  position: relative;
+  z-index: 2;
+  margin: 22px 20px 55px;
+  padding: 16px 22px;
+  color: #241511;
+  background: #ffffff;
+  border: 1px solid #241511;
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: .1em;
+}
+
+/* BOTTOM FOOTER */
+.closing .closing-footer {
+  position: relative;
+  inset: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  padding: 25px 5%;
+  color: #55433d;
+  background: #ffffff;
+  border-top: 1px solid #eee5e0;
+  opacity: 1;
+  font-size: 10px;
+  letter-spacing: .1em;
+}
+
+/* MOBILE FOOTER */
+@media (max-width: 700px) {
+
+  .closing {
+    padding-top: 65px;
+    min-height: 0;
+  }
+
+  .closing-copy {
+    padding: 0 16px;
+  }
+
+  .closing .eyebrow {
+    font-size: 9px;
+  }
+
+  .closing h2 {
+    font-size: clamp(35px, 9vw, 48px);
+    line-height: 1.08;
+    margin: 20px 0 12px;
+  }
+
+  .closing .footer-picture {
+    width: 100%;
+    margin: 0;
+  }
+
+  .closing .footer-picture img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    opacity: 1;
+  }
+
+  .closing .return-link {
+    margin: 18px 12px 38px;
+    padding: 14px 15px;
+    font-size: 9px;
+  }
+
+  .closing .closing-footer {
+    padding: 20px 15px;
+    gap: 15px;
+    font-size: 8px;
+    line-height: 1.5;
+  }
+
+  .closing .closing-footer span:last-child {
+    max-width: 155px;
+    text-align: right;
+  }
+}
