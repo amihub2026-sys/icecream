@@ -1,28 +1,549 @@
-'use strict';
-// Native document scrolling controls each animation; nothing intercepts wheel/touch events.
-const DATA=[
- {section:'journey',canvas:'journey-canvas',count:'journey-count',title:'journey-title',desc:'journey-desc',kicker:'journey-kicker',progress:'journey-progress',names:['CHOCOLATE','STRAWBERRY','BLUEBERRY'],lines:['Rich. Deep. Unmistakable.','A little sweetness in every swirl.','A beautifully bold finish.'],colors:['#24130f','#99445c','#292342'],folder:['journey-chocolate','journey-strawberry','journey-blueberry']},
- {section:'flavors',canvas:'showcase-canvas',count:'showcase-count',title:'showcase-title',desc:'showcase-desc',kicker:'showcase-kicker',progress:'showcase-progress',names:['BLUEBERRY','STRAWBERRY','CHOCOLATE'],lines:['Wild berries. Velvet swirls.','Fresh berries. Silky sweetness.','Dark drizzle. Pure indulgence.'],colors:['#292342','#99445c','#24130f'],folder:['cone-blueberry','cone-strawberry','cone-chocolate']}
-];
-const TOTAL=72, MAX_CACHE=90;const cache=new Map(), loading=new Set();
-const imageUrl=(folder,n)=>`assets/frames/${folder}/${String(n+1).padStart(4,'0')}.webp`;
-function load(folder,n){const key=`${folder}:${n}`;if(n<0||n>=TOTAL||cache.has(key)||loading.has(key))return;loading.add(key);const im=new Image();im.onload=()=>{loading.delete(key);cache.set(key,im);if(cache.size>MAX_CACHE){for(const k of cache.keys()){if(k!==key){cache.delete(k);break}}}};im.onerror=()=>loading.delete(key);im.src=imageUrl(folder,n)}
-function progressFor(section){const r=section.getBoundingClientRect();return Math.max(0,Math.min(1,-r.top/Math.max(1,section.offsetHeight-innerHeight)))}
-const state=DATA.map(x=>({...x,sectionEl:document.getElementById(x.section),canvasEl:document.getElementById(x.canvas),p:0,target:0,frame:-1,index:-1,ctx:null}));
-function layout(c){const dpr=Math.min(devicePixelRatio||1,1.5);const w=Math.round(c.clientWidth*dpr),h=Math.round(c.clientHeight*dpr);if(c.width!==w||c.height!==h){c.width=w;c.height=h}return {w,h}}
-function draw(s,img){const {w,h}=layout(s.canvasEl),ctx=s.ctx;if(!w||!h)return;ctx.clearRect(0,0,w,h);ctx.fillStyle=s.colors[s.index]||s.colors[0];ctx.fillRect(0,0,w,h);
-// Cover underneath for atmosphere; contained sharp image above preserves the full scoop/cone.
-const cr=Math.max(w/img.width,h/img.height),cw=img.width*cr,ch=img.height*cr;ctx.save();ctx.filter='blur(24px) brightness(.55)';ctx.drawImage(img,(w-cw)/2,(h-ch)/2,cw,ch);ctx.restore();
-const mobile=w/h<.9;const maxW=w,maxH=mobile?h*.58:h*.95;const scale=Math.min(maxW/img.width,maxH/img.height);const iw=img.width*scale,ih=img.height*scale;const cy=mobile?h*.41:h*.51;ctx.drawImage(img,(w-iw)/2,cy*h/ h-ih/2,iw,ih);
-}
-function animate(){for(const s of state){s.target=progressFor(s.sectionEl);s.p+=(s.target-s.p)*.18;if(Math.abs(s.target-s.p)<.0002)s.p=s.target;const raw=Math.min(3*TOTAL-1,Math.floor(s.p*(3*TOTAL-1))),idx=Math.min(2,Math.floor(raw/TOTAL)),fn=raw%TOTAL;const folder=s.folder[idx],key=`${folder}:${fn}`;s.index=idx;load(folder,fn);for(let j=1;j<=7;j++)load(folder,Math.min(TOTAL-1,fn+j));if(idx<2&&fn>TOTAL-9)for(let j=0;j<6;j++)load(s.folder[idx+1],j);
-let im=cache.get(key);if(!im){for(let d=1;d<10&&!im;d++){im=cache.get(`${folder}:${Math.max(0,fn-d)}`)||cache.get(`${folder}:${Math.min(TOTAL-1,fn+d)}`)}}
-if(im&&(s.frame!==raw||s.canvasEl.width===0)){draw(s,im);s.frame=raw}
-if(s.displayIndex!==idx){s.displayIndex=idx;document.getElementById(s.title).innerHTML=s.names[idx]+'<span class="period">.</span>';document.getElementById(s.desc).textContent=s.lines[idx];document.getElementById(s.count).textContent=`0${idx+1} — 03`;s.sectionEl.querySelector('.sticky-stage').style.backgroundColor=s.colors[idx]}
-document.getElementById(s.progress).style.width=`${Math.round(s.p*100)}%`}
-requestAnimationFrame(animate)}
-state.forEach(s=>{s.ctx=s.canvasEl.getContext('2d',{alpha:false});load(s.folder[0],0)});requestAnimationFrame(animate);
 
-// Enhancements: no scroll interception or video-completion locks.
-document.querySelectorAll('[data-flavor]').forEach(button=>button.addEventListener('click',()=>{const flavor=button.dataset.flavor;document.querySelectorAll('[data-flavor]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button))});const visual=document.querySelector('#custom-img');visual.src=`assets/stills/cone-${flavor}.webp`;visual.alt=`${flavor} waffle cone`;document.querySelector('#custom-name').textContent=`${flavor.toUpperCase()} / YOUR SCOOP`;}));
-const dlg=document.querySelector('#video-dialog'),detailVideo=document.querySelector('#detail-video');document.querySelectorAll('[data-video]').forEach(b=>b.addEventListener('click',()=>{const key=b.dataset.video;detailVideo.src=`assets/videos/${key}.mp4`;dlg.showModal();detailVideo.play().catch(()=>{})}));document.querySelector('#close-dialog').addEventListener('click',()=>dlg.close());dlg.addEventListener('close',()=>{detailVideo.pause();detailVideo.removeAttribute('src');detailVideo.load()});
+"use strict";
+
+// Native page scrolling controls the animations.
+// Nothing intercepts wheel or touch events.
+
+const DATA = [
+  {
+    section: "journey",
+    canvas: "journey-canvas",
+    count: "journey-count",
+    title: "journey-title",
+    desc: "journey-desc",
+    progress: "journey-progress",
+
+    names: [
+      "CHOCOLATE",
+      "STRAWBERRY",
+      "BLUEBERRY"
+    ],
+
+    lines: [
+      "Rich. Deep. Unmistakable.",
+      "A little sweetness in every swirl.",
+      "A beautifully bold finish."
+    ],
+
+    colors: [
+      "#24130f",
+      "#99445c",
+      "#292342"
+    ],
+
+    folder: [
+      "journey-chocolate",
+      "journey-strawberry",
+      "journey-blueberry"
+    ]
+  },
+
+  {
+    section: "flavors",
+    canvas: "showcase-canvas",
+    count: "showcase-count",
+    title: "showcase-title",
+    desc: "showcase-desc",
+    progress: "showcase-progress",
+
+    names: [
+      "BLUEBERRY",
+      "STRAWBERRY",
+      "CHOCOLATE"
+    ],
+
+    lines: [
+      "Wild berries. Velvet swirls.",
+      "Fresh berries. Silky sweetness.",
+      "Dark drizzle. Pure indulgence."
+    ],
+
+    colors: [
+      "#292342",
+      "#99445c",
+      "#24130f"
+    ],
+
+    folder: [
+      "cone-blueberry",
+      "cone-strawberry",
+      "cone-chocolate"
+    ]
+  }
+];
+
+// Each flavor uses 72 frames.
+const TOTAL = 72;
+const MAX_CACHE = 125;
+
+const cache = new Map();
+const loading = new Set();
+
+const clamp = (v, min, max) =>
+  Math.max(min, Math.min(max, v));
+
+const frameUrl = (folder, n) =>
+  `assets/frames/${folder}/${String(n + 1).padStart(4, "0")}.webp`;
+
+// ===============================
+// FRAME LOADING
+// ===============================
+
+function loadFrame(folder, n) {
+  if (n < 0 || n >= TOTAL) return;
+
+  const key = `${folder}:${n}`;
+
+  if (cache.has(key) || loading.has(key)) {
+    return;
+  }
+
+  loading.add(key);
+
+  const img = new Image();
+  img.decoding = "async";
+
+  img.onload = () => {
+    loading.delete(key);
+
+    cache.delete(key);
+    cache.set(key, img);
+
+    while (cache.size > MAX_CACHE) {
+      const oldest = cache.keys().next().value;
+      cache.delete(oldest);
+    }
+  };
+
+  img.onerror = () => {
+    loading.delete(key);
+  };
+
+  img.src = frameUrl(folder, n);
+}
+
+// ===============================
+// SCROLL PROGRESS
+// ===============================
+
+function sectionProgress(section) {
+  const rect = section.getBoundingClientRect();
+
+  const available = Math.max(
+    1,
+    section.offsetHeight - window.innerHeight
+  );
+
+  return clamp(
+    -rect.top / available,
+    0,
+    1
+  );
+}
+
+// ===============================
+// SECTION STATES
+// ===============================
+
+const states = DATA.map(item => ({
+  ...item,
+
+  sectionEl: document.getElementById(item.section),
+  canvasEl: document.getElementById(item.canvas),
+
+  titleEl: document.getElementById(item.title),
+  descEl: document.getElementById(item.desc),
+  countEl: document.getElementById(item.count),
+  progressEl: document.getElementById(item.progress),
+
+  ctx: null,
+
+  progressValue: 0,
+  frameDrawn: -1,
+  displayedIndex: -1,
+  currentIndex: 0,
+
+  lastImage: null,
+  forceRedraw: true
+}));
+
+// ===============================
+// RESPONSIVE CANVAS
+// ===============================
+
+function layout(canvas) {
+  const dpr = Math.min(
+    window.devicePixelRatio || 1,
+    1.5
+  );
+
+  const w = Math.max(
+    1,
+    Math.round(canvas.clientWidth * dpr)
+  );
+
+  const h = Math.max(
+    1,
+    Math.round(canvas.clientHeight * dpr)
+  );
+
+  const changed =
+    canvas.width !== w ||
+    canvas.height !== h;
+
+  if (changed) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+
+  return { w, h, changed };
+}
+
+// ===============================
+// FULL-WIDTH VIDEO FRAME DRAWING
+// ===============================
+
+function draw(state, image) {
+  if (!image || !image.naturalWidth) return;
+
+  const { w, h } = layout(state.canvasEl);
+  const ctx = state.ctx;
+
+  if (!w || !h || !ctx) return;
+
+  const mobile = window.matchMedia(
+    "(max-width: 700px)"
+  ).matches;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Background matches the active flavor.
+  ctx.fillStyle =
+    state.colors[state.currentIndex] ||
+    state.colors[0];
+
+  ctx.fillRect(0, 0, w, h);
+
+  const imageW = image.naturalWidth;
+  const imageH = image.naturalHeight;
+
+  // Desktop: cover entire viewport.
+  // Mobile: contain complete scoop/cone.
+  const scale = mobile
+    ? Math.min(w / imageW, h / imageH)
+    : Math.max(w / imageW, h / imageH);
+
+  const drawnW = imageW * scale;
+  const drawnH = imageH * scale;
+
+  // On mobile, position the video above the text.
+  const centerY = mobile
+    ? h * 0.39
+    : h * 0.5;
+
+  ctx.drawImage(
+    image,
+    (w - drawnW) / 2,
+    centerY - drawnH / 2,
+    drawnW,
+    drawnH
+  );
+}
+
+// ===============================
+// FIND NEAREST LOADED FRAME
+// ===============================
+
+function getNearestFrame(folder, index) {
+  const exact = cache.get(`${folder}:${index}`);
+
+  if (exact) return exact;
+
+  for (let distance = 1; distance <= 12; distance++) {
+    const before = cache.get(
+      `${folder}:${index - distance}`
+    );
+
+    const after = cache.get(
+      `${folder}:${index + distance}`
+    );
+
+    if (before) return before;
+    if (after) return after;
+  }
+
+  return null;
+}
+
+// ===============================
+// SMOOTH SCROLL ANIMATION
+// ===============================
+
+let previousTime = performance.now();
+
+function animate(now) {
+  const delta = Math.min(
+    64,
+    now - previousTime
+  );
+
+  previousTime = now;
+
+  // Frame-rate-independent smoothing.
+  const blend = 1 - Math.exp(-delta / 95);
+
+  for (const state of states) {
+    if (!state.sectionEl || !state.canvasEl) {
+      continue;
+    }
+
+    const target = sectionProgress(
+      state.sectionEl
+    );
+
+    state.progressValue +=
+      (target - state.progressValue) * blend;
+
+    if (
+      Math.abs(target - state.progressValue) <
+      0.00015
+    ) {
+      state.progressValue = target;
+    }
+
+    // Three flavors, 72 frames each.
+    const raw = Math.min(
+      TOTAL * 3 - 1,
+      Math.floor(state.progressValue * TOTAL * 3)
+    );
+
+    const index = Math.min(
+      2,
+      Math.floor(raw / TOTAL)
+    );
+
+    const frameNumber = raw % TOTAL;
+    const folder = state.folder[index];
+
+    state.currentIndex = index;
+
+    // Load current frame.
+    loadFrame(folder, frameNumber);
+
+    // Preload forward and backward.
+    for (let distance = 1; distance <= 5; distance++) {
+      loadFrame(folder, frameNumber + distance);
+      loadFrame(folder, frameNumber - distance);
+    }
+
+    // Preload next flavor.
+    if (
+      index < 2 &&
+      frameNumber >= TOTAL - 7
+    ) {
+      for (let n = 0; n < 7; n++) {
+        loadFrame(state.folder[index + 1], n);
+      }
+    }
+
+    // Preload previous flavor.
+    if (
+      index > 0 &&
+      frameNumber <= 6
+    ) {
+      for (
+        let n = TOTAL - 7;
+        n < TOTAL;
+        n++
+      ) {
+        loadFrame(state.folder[index - 1], n);
+      }
+    }
+
+    const { changed } = layout(
+      state.canvasEl
+    );
+
+    const image = getNearestFrame(
+      folder,
+      frameNumber
+    );
+
+    if (
+      image &&
+      (
+        raw !== state.frameDrawn ||
+        changed ||
+        state.forceRedraw ||
+        image !== state.lastImage
+      )
+    ) {
+      draw(state, image);
+
+      state.frameDrawn = raw;
+      state.lastImage = image;
+      state.forceRedraw = false;
+    }
+
+    // Update headings and background.
+    if (state.displayedIndex !== index) {
+      state.displayedIndex = index;
+
+      if (state.titleEl) {
+        state.titleEl.innerHTML =
+          `${state.names[index]}<span class="period">.</span>`;
+      }
+
+      if (state.descEl) {
+        state.descEl.textContent =
+          state.lines[index];
+      }
+
+      if (state.countEl) {
+        state.countEl.textContent =
+          `0${index + 1} — 03`;
+      }
+
+      const stage = state.sectionEl.querySelector(
+        ".sticky-stage"
+      );
+
+      if (stage) {
+        stage.style.backgroundColor =
+          state.colors[index];
+      }
+    }
+
+    if (state.progressEl) {
+      state.progressEl.style.width =
+        `${(state.progressValue * 100).toFixed(1)}%`;
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ===============================
+// INITIALIZE ANIMATIONS
+// ===============================
+
+states.forEach(state => {
+  if (!state.canvasEl) return;
+
+  state.ctx = state.canvasEl.getContext(
+    "2d",
+    { alpha: false }
+  );
+
+  loadFrame(state.folder[0], 0);
+});
+
+window.addEventListener(
+  "resize",
+  () => {
+    states.forEach(state => {
+      state.forceRedraw = true;
+      state.frameDrawn = -1;
+    });
+  },
+  { passive: true }
+);
+
+requestAnimationFrame(animate);
+
+// ===============================
+// FLAVOR CUSTOMIZER
+// ===============================
+
+document.querySelectorAll(
+  "[data-flavor]"
+).forEach(button => {
+
+  button.addEventListener("click", () => {
+    const flavor = button.dataset.flavor;
+
+    document.querySelectorAll(
+      "[data-flavor]"
+    ).forEach(other => {
+
+      const selected = other === button;
+
+      other.classList.toggle(
+        "selected",
+        selected
+      );
+
+      other.setAttribute(
+        "aria-pressed",
+        String(selected)
+      );
+    });
+
+    const img = document.querySelector(
+      "#custom-img"
+    );
+
+    const label = document.querySelector(
+      "#custom-name"
+    );
+
+    if (img) {
+      img.src =
+        `assets/stills/cone-${flavor}.webp`;
+
+      img.alt = `${flavor} waffle cone`;
+    }
+
+    if (label) {
+      label.textContent =
+        `${flavor.toUpperCase()} / YOUR SCOOP`;
+    }
+  });
+});
+
+// ===============================
+// CINEMATIC VIDEO MODAL
+// ===============================
+
+const dialog = document.querySelector(
+  "#video-dialog"
+);
+
+const detailVideo = document.querySelector(
+  "#detail-video"
+);
+
+if (dialog && detailVideo) {
+
+  document.querySelectorAll(
+    "[data-video]"
+  ).forEach(button => {
+
+    button.addEventListener("click", () => {
+      const key = button.dataset.video;
+
+      detailVideo.src =
+        `assets/videos/${key}.mp4`;
+
+      dialog.showModal();
+
+      detailVideo.play().catch(() => {});
+    });
+  });
+
+  document.querySelector(
+    "#close-dialog"
+  )?.addEventListener(
+    "click",
+    () => dialog.close()
+  );
+
+  dialog.addEventListener(
+    "close",
+    () => {
+      detailVideo.pause();
+      detailVideo.removeAttribute("src");
+      detailVideo.load();
+    }
+  );
+}
